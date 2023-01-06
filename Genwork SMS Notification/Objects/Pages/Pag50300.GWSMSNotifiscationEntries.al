@@ -46,10 +46,7 @@ page 50300 "GW SMS Notifiscation Entries"
                 {
                     ApplicationArea = All;
                 }
-                field("Has Payload"; Rec."Payload Json".HasValue)
-                {
-                    ApplicationArea = All;
-                }
+
                 field("Error Message"; Rec."Error Message")
                 {
                     ApplicationArea = All;

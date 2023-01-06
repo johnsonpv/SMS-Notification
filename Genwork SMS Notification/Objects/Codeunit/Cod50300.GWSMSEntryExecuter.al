@@ -4,9 +4,35 @@ codeunit 50300 "GW SMS Entry Executer"
     trigger OnRun()
     begin
         Rec.TESTFIELD(Active, TRUE);
+        Rec.TestField("Mobile No.");
+        CheckMobileValidation(Rec);
         GetSMSConnectorSetup();
         SMSConnectorSetup.TestField("SMS URL");
+        SMSConnectorSetup.TestField("Auth Key");
+        SMSConnectorSetup.TestField("Flow Id");
         ExecuteSMSEntries(Rec);
+    end;
+
+    Procedure CheckMobileValidation(VAR _SMSNotifyEntry: Record "GW SMS Notification Entry")
+    var
+        Ch: Char;
+        i: Integer;
+        Vari: Variant;
+    begin
+        for i := 1 to StrLen(_SMSNotifyEntry."Mobile No.") do begin
+            Ch := _SMSNotifyEntry."Mobile No."[i];
+            vari := Ch;
+            if not Vari.IsInteger then
+                Error('%1 does not have valid mobile no.', _SMSNotifyEntry."Client Name");
+        end;
+        if (StrLen(_SMSNotifyEntry."Mobile No.") > 12) OR (StrLen(_SMSNotifyEntry."Mobile No.") < 10) OR (StrLen(_SMSNotifyEntry."Mobile No.") = 11) THEN
+            Error('%1 does not have valid mobile no.', _SMSNotifyEntry."Client Name");
+
+        if (StrLen(_SMSNotifyEntry."Mobile No.") = 10) THEN
+            _SMSNotifyEntry."Mobile No." := '91' + _SMSNotifyEntry."Mobile No.";
+
+        IF (StrPos(_SMSNotifyEntry."Mobile No.", '91') <> 1) then
+            Error('%1 does not have valid mobile no.', _SMSNotifyEntry."Client Name");
     end;
 
     PROCEDURE ProcessSMSEntry(VAR _SMSNotifyEntry: Record "GW SMS Notification Entry"): Boolean;
@@ -44,15 +70,38 @@ codeunit 50300 "GW SMS Entry Executer"
 
     local procedure ExecuteSMSEntries(VAR SMSNotifyEntry: Record "GW SMS Notification Entry")
     begin
-        SendSMS(SMSNotifyEntry);
+        IF NOT SMSNotifyEntry."Is SMS Sent" THEN
+            SendSMS(SMSNotifyEntry);
+        IF NOT SMSNotifyEntry."Is E-mail Sent" THEN
+            SendEmail(SMSNotifyEntry);
     end;
 
     local procedure SendSMS(VAR _SMSNotifyEntry: Record "GW SMS Notification Entry")
     var
         _DataJson: Text;
     begin
-        _DataJson := _SMSNotifyEntry.GetRequestJson();
+        _DataJson := _SMSNotifyEntry.SMSToJson(SMSConnectorSetup."Flow Id");
         InvokeHttpJSONRequest(_DataJson, _SMSNotifyEntry);
+        _SMSNotifyEntry."Is SMS Sent" := true;
+    end;
+
+    procedure SendEmail(VAR _SMSNotifyEntry: Record "GW SMS Notification Entry")
+    var
+        Recipients: List of [Text];
+        Emailobj: Codeunit Email;
+        EmailMsg: Codeunit "Email Message";
+        TxtDefaultCCMailList: List of [Text];
+        TxtDefaultBCCMailList: List of [Text];
+        Body: Text;
+        SalesNotificationMsg: Label 'Dear %1, <br><br> Your order dated %2 is %3 .<br><br> Thank You, <br> -GWH';
+        SubjectMsg: Label 'Attention - Your Order Status ';
+        _CurrentDateTime: DateTime;
+    begin
+        Recipients.add(_SMSNotifyEntry."E-mail");
+        Body := StrSubstNo(SalesNotificationMsg, _SMSNotifyEntry."Client Name", _SMSNotifyEntry."Order Date", _SMSNotifyEntry.Comment);
+        EmailMsg.Create(Recipients, SubjectMsg, Body, true, TxtDefaultCCMailList, TxtDefaultBCCMailList);
+        Emailobj.Send(EmailMsg, Enum::"Email Scenario"::Default);
+        _SMSNotifyEntry."Is E-mail Sent" := true;
     end;
 
     local procedure InvokeHttpJSONRequest(_DataJson: Text; var _SMSNotifyEntry: Record "GW SMS Notification Entry")
@@ -74,14 +123,12 @@ codeunit 50300 "GW SMS Entry Executer"
         _ContentHeaders: HttpHeaders;
         _ErrorMessage: Text;
         _Result: Boolean;
-
     begin
         _Client.Clear();
         _Client.Timeout(60000);
         _RequestHeaders.Clear();
         _RequestHeaders := _Client.DefaultRequestHeaders();
         _Client.DefaultRequestHeaders.Add('Authorization', StrSubstNo('Bearer %1', SMSConnectorSetup."Access Token"));
-
         _RequestContent.WriteFrom(_RequestJson);
         _RequestContent.GetHeaders(_ContentHeaders);
         _ContentHeaders.Clear();

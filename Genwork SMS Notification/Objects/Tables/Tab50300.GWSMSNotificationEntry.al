@@ -36,10 +36,6 @@ table 50300 "GW SMS Notification Entry"
             OptionMembers = ,Successful,Unsuccessful;
             DataClassification = ToBeClassified;
         }
-        field(7; "Payload Json"; Blob)
-        {
-            DataClassification = ToBeClassified;
-        }
         field(8; "Processed DateTime"; DateTime)
         {
             DataClassification = ToBeClassified;
@@ -72,6 +68,22 @@ table 50300 "GW SMS Notification Entry"
         {
             DataClassification = ToBeClassified;
         }
+        field(16; "Is SMS Sent"; Boolean)
+        {
+            DataClassification = ToBeClassified;
+        }
+        field(17; "Is E-mail Sent"; Boolean)
+        {
+            DataClassification = ToBeClassified;
+        }
+        field(18; "Comment"; text[80])
+        {
+            DataClassification = ToBeClassified;
+        }
+        field(19; "Client Name"; text[100])
+        {
+            DataClassification = ToBeClassified;
+        }
     }
     keys
     {
@@ -97,7 +109,7 @@ table 50300 "GW SMS Notification Entry"
             _NextEntryNo := 1;
     END;
 
-    procedure GetRequestJson(): Text
+    /*procedure GetRequestJson(): Text
     var
         TempBlob: Codeunit "Temp Blob";
         TypeHelper: Codeunit "Type Helper";
@@ -116,6 +128,23 @@ table 50300 "GW SMS Notification Entry"
         "Payload Json".CreateOutStream(OutStream, TEXTENCODING::UTF8);
         OutStream.Write(StreamText);
         if Modify(true) then;
+    end;
+    */
+
+    procedure SMSToJson(FlowId: Text[250]): Text
+    var
+        _SMSObj: JsonObject;
+        _SMSJson: Text;
+    begin
+        Clear(_SMSObj);
+        _SMSObj.Add('flow_id', FlowId);
+        _SMSObj.Add('short_url', '0');
+        _SMSObj.Add('mobiles', Rec."Mobile No.");
+        _SMSObj.Add('var1', Rec."Client Name");
+        _SMSObj.Add('var2', 'Dated' + Format(Rec."Order Date"));
+        _SMSObj.Add('var3', Rec.Comment);
+        _SMSObj.WriteTo(_SMSJson);
+        exit(_SMSJson);
     end;
 
     procedure DeleteEntries(DaysOld: Integer)

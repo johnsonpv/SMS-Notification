@@ -23,6 +23,8 @@ table 50301 "GW SMS Connector Setup"
             begin
                 if "SMS URL" <> '' then
                     WebRequestHelper.IsSecureHttpUrl("SMS URL");
+
+                CheckAndAppendURLPath("SMS URL");
             end;
         }
         field(3; "Access Token"; Blob)

@@ -33,9 +33,7 @@ page 50301 "GW SMS Connector Setup"
                         MultiLine = true;
                         ShowCaption = false;
                         Editable = false;
-
                         ToolTip = 'Specifies the value of the Access Token field.';
-
                         trigger OnValidate()
                         begin
                             Rec.SetAccessToken(AccessToken);

@@ -20,9 +20,9 @@ codeunit 50301 "GW SMS Entry Handler"
         _Text001: TextConst ENU = 'Sending Whse Notification. Please wait...\';
         _Text002: TextConst ENU = '@@@@@@@@@@@1@@@@@@@@@@@@';
         _Text003: TextConst ENU = 'Do you really want to send SMS/E-Mail?';
-        _Text004: TextConst ENU = 'Process finished. %1 Successful, %2 with Error , %3 with Skipped.';
+        _Text004: TextConst ENU = 'Process finished. %1 Successful, %2 with Error.';
     begin
-        _TempSMSNotifyEntry.DELETEALL();
+        //  _TempSMSNotifyEntry.DELETEALL();
         IF GUIALLOWED THEN BEGIN
             IF NOT CONFIRM(_Text003) THEN
                 EXIT;
@@ -38,21 +38,19 @@ codeunit 50301 "GW SMS Entry Handler"
                 _Counter += 1;
                 IF GUIALLOWED THEN
                     _Window.UPDATE(1, ROUND(10000 / _CounterAll * _Counter, 1));
-                _TempSMSNotifyEntry.SetCurrentKey("Entry No.");
-                _TempSMSNotifyEntry.SetRange("Entry No.", SMSNotifyEntry."Entry No.");
-                if not _TempSMSNotifyEntry.FindFirst() then begin
-                    if _SMSEntryExecuter.ProcessSMSEntry(SMSNotifyEntry) THEN
-                        _CounterOK += 1
-                    else begin
-                        _CounterError += 1;
-                        PrepareDataForResendLogEntry(SMSNotifyEntry, _TempSMSNotifyEntry)
-                    end;
-                end else
-                    _CounterSkip += 1;
+                // _TempSMSNotifyEntry.SetCurrentKey("Entry No.");
+                // _TempSMSNotifyEntry.SetRange("Entry No.", SMSNotifyEntry."Entry No.");
+                //if not _TempSMSNotifyEntry.FindFirst() then begin
+                if _SMSEntryExecuter.ProcessSMSEntry(SMSNotifyEntry) THEN
+                    _CounterOK += 1
+                else begin
+                    _CounterError += 1;
+                    //PrepareDataForResendLogEntry(SMSNotifyEntry, _TempSMSNotifyEntry)
+                end;
             UNTIL SMSNotifyEntry.NEXT = 0;
         IF GUIALLOWED THEN BEGIN
             _Window.CLOSE;
-            MESSAGE(_Text004, _CounterOK, _CounterError, _CounterSkip);
+            MESSAGE(_Text004, _CounterOK, _CounterError);
         END;
     END;
 
